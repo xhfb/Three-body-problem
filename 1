@@ -1,0 +1,187 @@
+from datetime import time
+import math
+
+import numpy as np
+from matplotlib import pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import time
+
+k=9000000000#经典常量
+
+class Vector():
+    '''
+    向量类型
+    '''
+    def __init__(self) -> None:
+        self.type_="" #"速度" "加速度" "电场强度"
+        self.x=0
+        self.y=0
+        self.z=0
+    
+    def mold_length(self):
+        '''
+        求该向量的模长
+        '''
+        r2=self.x*self.x+self.y*self.y+self.z*self.z
+        r=math.sqrt(r2)
+        return r
+
+class Point():
+    '''
+    电荷类型
+    '''
+    def __init__(self) -> None:
+        self.name="" #名称
+        self.charge=0 #电荷量 C 注意正负
+        self.m=0 #质量 kg
+        #位置
+        self.x=0# m
+        self.y=0
+        self.z=0
+        
+        #速度
+        self.v_x=0# m/s
+        self.v_y=0
+        self.v_z=0
+        
+        #加速度
+        self.a_x=0# m/s^2
+        self.a_y=0
+        self.a_z=0
+        
+    def field(self,x,y,z):
+        '''
+        求该电荷在（x,y,z）处产生的电场强度
+        param: x,y,z:目标位置
+        return: Vector 向量类型 
+        '''
+        
+        r2=(self.x-x)*(self.x-x)+(self.y-y)*(self.y-y)+(self.z-z)*(self.z-z)
+        Q=self.charge/r2
+        E_x=k*Q*(x-self.x)/math.sqrt(r2)
+        E_y=k*Q*(y-self.y)/math.sqrt(r2)
+        E_z=k*Q*(z-self.z)/math.sqrt(r2)
+        
+        EE=Vector()
+        EE.x=E_x
+        EE.y=E_y
+        EE.z=E_z
+        EE.type_="电场强度"
+        
+        return EE
+
+def multiply_V(a,b):
+    '''
+    a,b向量相乘
+    返回模长 float
+    '''
+    c=Vector()
+    c.x=a.x*b.x
+    c.y=a.y*b.y
+    c.x=a.z*b.z
+    return c.x+c.y+c.z
+
+def add_V(a,b):
+    '''
+    param a,b:向量a,b
+    return :Vector 向量相加后的向量
+    '''
+    c=Vector()
+    c.type_=a.type_
+    c.x=a.x+b.x
+    c.y=a.y+b.y
+    c.z=a.z+b.z
+    return c
+
+if __name__=="__main__":
+    Point_list=[]
+    total=3
+    #total=int(input("请输入一共要模拟多少个点:"))
+    point_locations=[[[],[],[]],[[],[],[]],[[],[],[]]]
+    color=["red","blue","yellow"]
+    fig = plt.figure()
+    ax1 = plt.axes(projection='3d')
+    
+    
+    #格式:charge x y z v_x v_y v_z m 
+    tempmsg_list=["20/900000 0 0 0 0 0 1 1",
+                  "-4/900000 1 0 0 0 -0.5 1 1",
+                  "-4/900000 -1 0 0 0 0.5 1 1"]
+    during=0.001
+    total_time=100
+    draw_step=10
+    
+    for i in range(total):
+        if not tempmsg_list:
+            tempmsg=input("请依次输入第%d/%d个点的初始信息，格式:charge x y z v_x v_y v_z m (数据以空格为间隔)\n"%(i+1,total))
+            tempmsg=tempmsg.split()
+        else:
+            tempmsg=tempmsg_list[i]
+            tempmsg=tempmsg.split()
+        temp=Point()
+        temp.charge= eval(tempmsg[0])#float(tempmsg[0])
+        temp.x=  eval(tempmsg[1])#float(tempmsg[1])
+        temp.y=  eval(tempmsg[2])#float(tempmsg[2])
+        temp.z=  eval(tempmsg[3])#float(tempmsg[3])
+        temp.v_x=eval(tempmsg[4])#float(tempmsg[4])
+        temp.v_y=eval(tempmsg[5])#float(tempmsg[5])
+        temp.v_z=eval(tempmsg[6])#float(tempmsg[6])
+        temp.m  =eval(tempmsg[7])#float(tempmsg[7])
+        Point_list.append(temp)
+    """
+    Point_list[1].x=999
+    for i in range(total):
+        print(Point_list[i].charge,Point_list[i].x)
+    """
+    #during=float(input("请输入数据计算间隔(单位：秒):"))
+    
+    #total_time=float(input("请输入数据计算总时间(单位：秒):"))
+    
+    num=0
+    timestamp=0
+    while timestamp<total_time:
+        
+        #print("time:%f"%(timestamp))
+        E_list=[]#计算其他电荷在该点处产生的场强矢量和
+        a_list=[]#计算电荷的加速度
+
+        for index in range(len(Point_list)):
+            temp_E=Vector()#受到的电场强度
+            for index_2 in range(len(Point_list)):
+                if index_2!=index:
+                    temp_E_2=Point_list[index_2].field(Point_list[index].x,Point_list[index].y,Point_list[index].z)
+                    temp_E=add_V(temp_E,temp_E_2) 
+            E_list.append(temp_E)
+            temp_a=Vector()
+            temp_a.x=temp_E.x*Point_list[index].charge/Point_list[index].m
+            temp_a.y=temp_E.y*Point_list[index].charge/Point_list[index].m
+            temp_a.z=temp_E.z*Point_list[index].charge/Point_list[index].m
+            temp_a.type_="加速度"
+            a_list.append(temp_a)
+
+        for index in range(len(Point_list)):
+            
+            Point_list[index].x=Point_list[index].x+Point_list[index].v_x*during+0.5*a_list[index].x*during**2 #x=x0+v0*t+1/2a*t^2
+            Point_list[index].y=Point_list[index].y+Point_list[index].v_y*during+0.5*a_list[index].y*during**2
+            Point_list[index].z=Point_list[index].z+Point_list[index].v_z*during+0.5*a_list[index].z*during**2
+
+            Point_list[index].v_x=Point_list[index].v_x+a_list[index].x*during
+            Point_list[index].v_y=Point_list[index].v_y+a_list[index].y*during
+            Point_list[index].v_z=Point_list[index].v_z+a_list[index].z*during   
+            
+            point_locations[index][0].append(Point_list[index].x)
+            point_locations[index][1].append(Point_list[index].y)
+            point_locations[index][2].append(Point_list[index].z)
+
+            #print("第%d个点受到其他点的场强为 Ex=%f,Ey=%f,Ez=%f"%(index+1,temp_E.x,temp_E.y,temp_E.z))
+            #print("第%d个点加速度 ax=%f,ay=%f,az=%f"%(index+1,temp_a.x,temp_a.y,temp_a.z))
+            #print("第%d个点坐标 x=%f,y=%f,z=%f"%(index+1,Point_list[index].x,Point_list[index].y,Point_list[index].z))
+        timestamp+=during
+        num+=1
+    print("共生成%d组数据"%num)
+    
+        #for i in range(num):
+    for j in range(3):
+        ax1.plot3D(point_locations[j][0][::draw_step],point_locations[j][1][::draw_step],point_locations[j][2][::draw_step],color[j])    #绘制空间曲线    
+        #time.sleep(0.2)
+    plt.show()
